@@ -21,11 +21,22 @@
 
 import ldif
 import sys
-import StringIO
+import io
 
 import dns.zone
 import dns.rdatatype
 import pdb
+
+
+def convert(input):
+    if isinstance(input, dict):
+        return {key: convert(value) for key, value in input.items()}
+    elif isinstance(input, list):
+        return [convert(element) for element in input]
+    elif isinstance(input, str):
+        return input.encode('utf-8')
+    else:
+        return input
 
 
 class Name:
@@ -89,16 +100,16 @@ class Name:
         if self.ttl:
             self.ldap_obj['DNSTTL'] = [str(self.ttl)]
 
-        buff = StringIO.StringIO()
+        buff = io.StringIO()
         ldifw = ldif.LDIFWriter(buff)
-        ldifw.unparse(self.dn, self.ldap_obj)
+        ldifw.unparse(self.dn, convert(self.ldap_obj))
         return buff.getvalue()
 
 #pdb.set_trace()
 
 if len(sys.argv) != 4:
-    print 'Usage:   ' + sys.argv[0] + ' <zone file> <zone origin> <LDAP DNS base>'
-    print 'Example: ' + sys.argv[0] + ' /var/named/zone.example.com.db zone.example.com. "cn=dns, dc=ipa, dc=example, dc=com"'
+    print('Usage:   ' + sys.argv[0] + ' <zone file> <zone origin> <LDAP DNS base>')
+    print('Example: ' + sys.argv[0] + ' /var/named/zone.example.com.db zone.example.com. "cn=dns, dc=ipa, dc=example, dc=com"')
     sys.exit(1)
 
 infile = open(sys.argv[1])
@@ -113,4 +124,4 @@ for name in zone:
         n.update_ttl(rrset)
         for rr in rrset.items:
             n.add_record(rr)
-    print n
+    print(n)
